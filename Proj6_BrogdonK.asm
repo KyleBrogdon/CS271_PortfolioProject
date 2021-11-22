@@ -39,10 +39,7 @@ NUMINTS = 10								; number of ints we must collect from the user
 ;-----------------------------------------------------------------------------------------------
 ; Name: main
 ;
-; Generates ARRAYSIZE of random integers from LO to HI and then displays the list of random ints to user,
-;		sorts the list, displays the sorted list, displays the median value of the list in ascending order,
-;		then displays the count of each occurence of each random int in the list using the stack for parameter
-;		passing. No global variables used except CONSTANTS.
+; does things
 ;
 ; Preconditions: Irvine32 must be included, NUMINTS must be declared, and .data must contain all arrays/strings
 ;										used by subprocedures. Array must be type SDWORD.
