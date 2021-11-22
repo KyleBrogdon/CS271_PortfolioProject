@@ -20,7 +20,7 @@ mDisplayString MACRO
 	; Print the string which is stored in a specified memory location (input parameter, by reference).
 ENDM
 
-NUMINTS = 10								; number of integers we must collect from the user
+NUMINTS = 10								; number of ints we must collect from the user
 
 .data
 	signedArray		SDWORD		NUMINTS DUP (?)
