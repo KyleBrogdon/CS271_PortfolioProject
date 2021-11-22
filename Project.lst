@@ -1,8 +1,8 @@
-Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/21/21 22:24:29
-)Program Template     (Proj6_BrogdonK.asm		     Page 1 - 1
+Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/21/21 22:46:49
+<CS271 Project 6: Low level I/O and macros     (Proj6_Brogdo  Page 1 - 1
 
 
-				TITLE Program Template     (Proj6_BrogdonK.asm)
+				TITLE CS271 Project 6: Low level I/O and macros     (Proj6_BrogdonK.asm)
 
 				; Author: Kyle Brogdon
 				; Last Modified: 21NOV2021
@@ -41,11 +41,13 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/21/21 22:24:29
 					; Print the string which is stored in a specified memory location (input parameter, by reference).
 				ENDM
 
- = 0000000A			NUMINTS = 10										; number of integers we must collect from the user
+ = 0000000A			NUMINTS = 10								; number of integers we must collect from the user
 
  00000000			.data
-					
- 00000000 43 6F 6D 70 75		introProgram1	BYTE		"Computer Architecture and Assembly Project 6: Low level input/output procedures and macros", 0
+ 00000000  0000000A [			signedArray		SDWORD		NUMINTS DUP (?)
+	    00000000
+	   ]
+ 00000028 43 6F 6D 70 75		introProgram1	BYTE		"Computer Architecture and Assembly Project 6: Low level input/output procedures and macros", 0
 	   74 65 72 20 41
 	   72 63 68 69 74
 	   65 63 74 75 72
@@ -64,22 +66,22 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/21/21 22:24:29
 	   61 6E 64 20 6D
 	   61 63 72 6F 73
 	   00
- 0000005B 57 72 69 74 74		introProgram2	BYTE		"Written by: Kyle Brogdon", 13, 10, 0
+ 00000083 57 72 69 74 74		introProgram2	BYTE		"Written by: Kyle Brogdon", 13, 10, 0
 	   65 6E 20 62 79
 	   3A 20 4B 79 6C
 	   65 20 42 72 6F
 	   67 64 6F 6E 0D
 	   0A 00
- 00000076 50 6C 65 61 73	    programRules1	BYTE		"Please enter ", 0
+ 0000009E 50 6C 65 61 73	    programRules1	BYTE		"Please enter ", 0
 	   65 20 65 6E 74
 	   65 72 20 00
- 00000084 20 73 69 67 6E		programRules2	BYTE		" signed decimal integers.", 0
+ 000000AC 20 73 69 67 6E		programRules2	BYTE		" signed decimal integers.", 0
 	   65 64 20 64 65
 	   63 69 6D 61 6C
 	   20 69 6E 74 65
 	   67 65 72 73 2E
 	   00
- 0000009E 45 61 63 68 20		programRules3	BYTE		"Each user number must fit inside a 32 bit register.", 0
+ 000000C6 45 61 63 68 20		programRules3	BYTE		"Each user number must fit inside a 32 bit register.", 0
 	   75 73 65 72 20
 	   6E 75 6D 62 65
 	   72 20 6D 75 73
@@ -90,7 +92,7 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/21/21 22:24:29
 	   74 20 72 65 67
 	   69 73 74 65 72
 	   2E 00
- 000000D2 41 66 74 65 72		programRules4	BYTE		"After you have finished entering the signed numbers, I will display a list of the integers, their sum, and average.", 13, 10, 0
+ 000000FA 41 66 74 65 72		programRules4	BYTE		"After you have finished entering the signed numbers, I will display a list of the integers, their sum, and average.", 13, 10, 0
 	   20 79 6F 75 20
 	   68 61 76 65 20
 	   66 69 6E 69 73
@@ -114,14 +116,14 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/21/21 22:24:29
 	   64 20 61 76 65
 	   72 61 67 65 2E
 	   0D 0A 00
- 00000148 50 6C 65 61 73		userInputString	BYTE		"Please enter a signed number: ", 0
+ 00000170 50 6C 65 61 73		userInputString	BYTE		"Please enter a signed number: ", 0
 	   65 20 65 6E 74
 	   65 72 20 61 20
 	   73 69 67 6E 65
 	   64 20 6E 75 6D
 	   62 65 72 3A 20
 	   00
- 00000167 45 52 52 4F 52		errorPrompt		BYTE		"ERROR: You did not enter a signed number or the value was too large. Please try again.", 13, 10, 0
+ 0000018F 45 52 52 4F 52		errorPrompt		BYTE		"ERROR: You did not enter a signed number or the value was too large. Please try again.", 13, 10, 0
 	   3A 20 59 6F 75
 	   20 64 69 64 20
 	   6E 6F 74 20 65
@@ -139,7 +141,7 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/21/21 22:24:29
 	   20 74 72 79 20
 	   61 67 61 69 6E
 	   2E 0D 0A 00
- 000001C0 47 6F 6F 64 62		farewell		BYTE		"Goodbye, and thanks for using this program!", 13, 10, 0
+ 000001E8 47 6F 6F 64 62		farewell		BYTE		"Goodbye, and thanks for using this program!", 13, 10, 0
 	   79 65 2C 20 61
 	   6E 64 20 74 68
 	   61 6E 6B 73 20
@@ -160,19 +162,19 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/21/21 22:24:29
 				;		then displays the count of each occurence of each random int in the list using the stack for parameter
 				;		passing. No global variables used except CONSTANTS.
 				;
-				; Preconditions: Irvine32 must be included, ARRAYSIZE, LO, HIGH must be declared, and .data must contain all arrays/strings
-				;										used by subprocedures. Arrays must be type DWORD.
+				; Preconditions: Irvine32 must be included, NUMINTS must be declared, and .data must contain all arrays/strings
+				;										used by subprocedures. Array must be type SDWORD.
 				;
 				;-----------------------------------------------------------------------------------------------
 
  00000000			main PROC
 					; introduces the user to the program, the programmer, and the rules
- 00000000  68 000000D2 R		PUSH	OFFSET programRules4
- 00000005  68 0000009E R		PUSH	OFFSET programRules3
- 0000000A  68 00000084 R		PUSH	OFFSET programRules2
- 0000000F  68 00000076 R		PUSH	OFFSET programRules1
- 00000014  68 0000005B R		PUSH	OFFSET introprogram2
- 00000019  68 00000000 R		PUSH	OFFSET introProgram1
+ 00000000  68 000000FA R		PUSH	OFFSET programRules4
+ 00000005  68 000000C6 R		PUSH	OFFSET programRules3
+ 0000000A  68 000000AC R		PUSH	OFFSET programRules2
+ 0000000F  68 0000009E R		PUSH	OFFSET programRules1
+ 00000014  68 00000083 R		PUSH	OFFSET introprogram2
+ 00000019  68 00000028 R		PUSH	OFFSET introProgram1
  0000001E  E8 00000024			CALL	introduction
 
  00000023  B9 0000000A			MOV		ECX, NUMINTS
@@ -187,7 +189,7 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/21/21 22:24:29
 
  00000036			_sayGoodbye:
 					; says farewell to the user
- 00000036  68 000001C0 R		PUSH	OFFSET farewell						
+ 00000036  68 000001E8 R		PUSH	OFFSET farewell						
  0000003B  E8 00000067			CALL	goodbye								
 
 					Invoke ExitProcess,0	; exit to operating system
@@ -211,6 +213,7 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/21/21 22:24:29
 				;				[EBP + 16]			= programRules1 passed by reference
 				;				[EBP + 12]			= introProgram2 passed by reference
 				;				[EBP + 8]			= introProgram1 passed by reference
+				;				[EBP + 4]
 				;-----------------------------------------------------------------------------------------------
 
  00000047			introduction PROC
@@ -218,7 +221,7 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/21/21 22:24:29
  00000048  8B EC			MOV		EBP, ESP
  0000004A  52				PUSH	EDX
  0000004B  50				PUSH	EAX
-					
+
 					;print introProgram1 and introProgram2
  0000004C  8B 55 08			MOV		EDX, [EBP + 8]
  0000004F  E8 00000000 E		CALL	writeString
@@ -328,8 +331,8 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/21/21 22:24:29
  000000BD			goodbye ENDP
 
 				END main
-Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/21/21 22:24:29
-)Program Template     (Proj6_BrogdonK.asm		     Symbols 2 - 1
+Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/21/21 22:46:49
+<CS271 Project 6: Low level I/O and macros     (Proj6_Brogdo  Symbols 2 - 1
 
 
 
@@ -430,7 +433,7 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 000001EE Para	  Public  'DATA'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000216 Para	  Public  'DATA'	
 _TEXT  . . . . . . . . . . . . .	32 Bit	 000000BD Para	  Public  'CODE'	
 
 
@@ -768,13 +771,13 @@ black  . . . . . . . . . . . . .	Number	 00000000h
 blue . . . . . . . . . . . . . .	Number	 00000001h   
 brown  . . . . . . . . . . . . .	Number	 00000006h   
 cyan . . . . . . . . . . . . . .	Number	 00000003h   
-errorPrompt  . . . . . . . . . .	Byte	 00000167 _DATA	
+errorPrompt  . . . . . . . . . .	Byte	 0000018F _DATA	
 exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
-farewell . . . . . . . . . . . .	Byte	 000001C0 _DATA	
+farewell . . . . . . . . . . . .	Byte	 000001E8 _DATA	
 gray . . . . . . . . . . . . . .	Number	 00000008h   
 green  . . . . . . . . . . . . .	Number	 00000002h   
-introProgram1  . . . . . . . . .	Byte	 00000000 _DATA	
-introProgram2  . . . . . . . . .	Byte	 0000005B _DATA	
+introProgram1  . . . . . . . . .	Byte	 00000028 _DATA	
+introProgram2  . . . . . . . . .	Byte	 00000083 _DATA	
 lightBlue  . . . . . . . . . . .	Number	 00000009h   
 lightCyan  . . . . . . . . . . .	Number	 0000000Bh   
 lightGray  . . . . . . . . . . .	Number	 00000007h   
@@ -782,12 +785,13 @@ lightGreen . . . . . . . . . . .	Number	 0000000Ah
 lightMagenta . . . . . . . . . .	Number	 0000000Dh   
 lightRed . . . . . . . . . . . .	Number	 0000000Ch   
 magenta  . . . . . . . . . . . .	Number	 00000005h   
-programRules1  . . . . . . . . .	Byte	 00000076 _DATA	
-programRules2  . . . . . . . . .	Byte	 00000084 _DATA	
-programRules3  . . . . . . . . .	Byte	 0000009E _DATA	
-programRules4  . . . . . . . . .	Byte	 000000D2 _DATA	
+programRules1  . . . . . . . . .	Byte	 0000009E _DATA	
+programRules2  . . . . . . . . .	Byte	 000000AC _DATA	
+programRules3  . . . . . . . . .	Byte	 000000C6 _DATA	
+programRules4  . . . . . . . . .	Byte	 000000FA _DATA	
 red  . . . . . . . . . . . . . .	Number	 00000004h   
-userInputString  . . . . . . . .	Byte	 00000148 _DATA	
+signedArray  . . . . . . . . . .	DWord	 00000000 _DATA	
+userInputString  . . . . . . . .	Byte	 00000170 _DATA	
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
 yellow . . . . . . . . . . . . .	Number	 0000000Eh   
