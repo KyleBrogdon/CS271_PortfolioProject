@@ -1,4 +1,4 @@
-TITLE Program Template     (Proj6_BrogdonK.asm)
+TITLE CS271 Project 6: Low level I/O and macros     (Proj6_BrogdonK.asm)
 
 ; Author: Kyle Brogdon
 ; Last Modified: 21NOV2021
@@ -20,10 +20,10 @@ mDisplayString MACRO
 	; Print the string which is stored in a specified memory location (input parameter, by reference).
 ENDM
 
-NUMINTS = 10										; number of integers we must collect from the user
+NUMINTS = 10								; number of integers we must collect from the user
 
 .data
-	
+	signedArray		SDWORD		NUMINTS DUP (?)
 	introProgram1	BYTE		"Computer Architecture and Assembly Project 6: Low level input/output procedures and macros", 0
 	introProgram2	BYTE		"Written by: Kyle Brogdon", 13, 10, 0
     programRules1	BYTE		"Please enter ", 0
@@ -44,8 +44,8 @@ NUMINTS = 10										; number of integers we must collect from the user
 ;		then displays the count of each occurence of each random int in the list using the stack for parameter
 ;		passing. No global variables used except CONSTANTS.
 ;
-; Preconditions: Irvine32 must be included, ARRAYSIZE, LO, HIGH must be declared, and .data must contain all arrays/strings
-;										used by subprocedures. Arrays must be type DWORD.
+; Preconditions: Irvine32 must be included, NUMINTS must be declared, and .data must contain all arrays/strings
+;										used by subprocedures. Array must be type SDWORD.
 ;
 ;-----------------------------------------------------------------------------------------------
 
@@ -93,6 +93,7 @@ main ENDP
 ;				[EBP + 16]			= programRules1 passed by reference
 ;				[EBP + 12]			= introProgram2 passed by reference
 ;				[EBP + 8]			= introProgram1 passed by reference
+;				[EBP + 4]
 ;-----------------------------------------------------------------------------------------------
 
 introduction PROC
@@ -100,7 +101,7 @@ introduction PROC
 	MOV		EBP, ESP
 	PUSH	EDX
 	PUSH	EAX
-	
+
 	;print introProgram1 and introProgram2
 	MOV		EDX, [EBP + 8]
 	CALL	writeString
