@@ -1,1 +1,2 @@
 C:\CS271\Project0\Debug\Project.exe
+C:\CS271\Project 6\Debug\Project.exe
