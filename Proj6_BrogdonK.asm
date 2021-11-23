@@ -21,18 +21,20 @@ mDisplayString MACRO
 ENDM
 
 NUMINTS = 10								; number of ints we must collect from the user
+MAXSIZE = 101
 
 .data
 	signedArray		SDWORD		NUMINTS DUP (?)
 	introProgram1	BYTE		"Computer Architecture and Assembly Project 6: Low level input/output procedures and macros", 0
 	introProgram2	BYTE		"Written by: Kyle Brogdon", 13, 10, 0
     programRules1	BYTE		"Please enter ", 0
-	programRules2	BYTE		" signed decimal integers.", 0
-	programRules3	BYTE		"Each user number must fit inside a 32 bit register.", 0
-	programRules4	BYTE		"After you have finished entering the signed numbers, I will display a list of the integers, their sum, and average.", 13, 10, 0
-	userInputString	BYTE		"Please enter a signed number: ", 0
+	programRules2	BYTE		" signed decimal integers. Each number must fit inside a 32 bit register.", 0
+	programRules3	BYTE		"After you have finished entering the signed numbers, I will display a list of the integers, their sum, and average.", 13, 10, 0
+	userInputPrompt	BYTE		"Please enter a signed number: ", 0
+	userInputString	BYTE		?
 	errorPrompt		BYTE		"ERROR: You did not enter a signed number or the value was too large. Please try again.", 13, 10, 0
 	farewell		BYTE		"Goodbye, and thanks for using this program!", 13, 10, 0
+	stringLen		DWORD		?
 
 .code
 
@@ -48,7 +50,6 @@ NUMINTS = 10								; number of ints we must collect from the user
 
 main PROC
 	; introduces the user to the program, the programmer, and the rules
-	PUSH	OFFSET programRules4
 	PUSH	OFFSET programRules3
 	PUSH	OFFSET programRules2
 	PUSH	OFFSET programRules1
@@ -58,7 +59,9 @@ main PROC
 
 	MOV		ECX, NUMINTS
 _mainLoop:
-
+	PUSH	OFFSET stringLen
+	PUSH	OFFSET userInputString
+	PUSH	OFFSET userInputPrompt
 	CALL	readVal
 
 	CALL	writeVal
@@ -84,13 +87,11 @@ main ENDP
 ;
 ; Receives:
 ;				
-;				[EBP + 28]			= programRules4 passed by reference
 ;				[EBP + 24]			= programRules3 passed by reference
 ;				[EBP + 20]			= programRules2 passed by reference
 ;				[EBP + 16]			= programRules1 passed by reference
 ;				[EBP + 12]			= introProgram2 passed by reference
 ;				[EBP + 8]			= introProgram1 passed by reference
-;				[EBP + 4]
 ;-----------------------------------------------------------------------------------------------
 
 introduction PROC
@@ -123,17 +124,12 @@ introduction PROC
 	MOV		EDX, [EBP + 24]
 	CALL	writeString
 	CALL	CrLF
-	
-	;print programRules4
-	MOV		EDX, [EBP + 28]
-	CALL	writeString
-	CALL	CrLF
 
 	; restore stack
 	POP		EDX
 	POP		EAX
 	POP		EBP
-	RET		24
+	RET		20
 introduction ENDP
 
 ;-----------------------------------------------------------------------------------------------
@@ -154,8 +150,28 @@ introduction ENDP
 ;-----------------------------------------------------------------------------------------------
 
 readVal PROC
+	PUSH	EBP
+	MOV		EBP, ESP
+	PUSH	EDX
+	PUSH	ECX
+	PUSH	EDI
 
-RET
+	MOV		EDX, [EBP + 8]
+	CALL	writeString
+	MOV		EDX, [EBP + 12]
+	MOV		ECX, MAXSIZE
+	CALL	readString
+	MOV		EDI, [EBP + 16]
+	MOV		[EDI], EAX
+	CALL	CrLF
+
+	; validate the user input and convert
+
+	POP		EDI
+	POP		ECX
+	POP		EDX
+	POP		EBP
+	RET		12
 readVal ENDP
 
 ;-----------------------------------------------------------------------------------------------
