@@ -35,6 +35,8 @@ ENDM
 
 NUMINTS = 10								; number of ints we must collect from the user
 MAXSIZE = 101
+32bitUpper = 2147483647						; max value that can be accepted into a signed 32 bit register
+32bitLower = -2147483648					; minimum value that can be accepted into a signed 32 bit register
 
 .data
 	signedArray		SDWORD		NUMINTS DUP (?)
