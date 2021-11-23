@@ -10,10 +10,23 @@ TITLE CS271 Project 6: Low level I/O and macros     (Proj6_BrogdonK.asm)
 
 INCLUDE Irvine32.inc
 
-mGetString MACRO
+mGetString MACRO prompt, stringStorage, bytesRead
 	; Display a prompt (input parameter, by reference), then get the user’s keyboard input into a memory location (output parameter, by reference). 
 	; You may also need to provide a count (input parameter, by value) for the length of input string you can accommodate and a provide a number 
 	; of bytes read (output parameter, by reference) by the macro.
+
+	PUSHAD
+
+	MOV		EDX, prompt
+	CALL	writeString
+	MOV		EDX, stringStorage
+	MOV		ECX, MAXSIZE
+	CALL	readString
+	MOV		EDI, bytesRead
+	MOV		[EDI], EAX
+	CALL	CrLF
+
+	POPAD
 ENDM
 
 mDisplayString MACRO
@@ -142,9 +155,9 @@ introduction ENDP
 ;
 ; Receives:
 ;				[EBP + 20]			= 
-;				[EBP + 16]			= 
-;				[EBP + 12]			= 
-;				[EBP + 8]			= 
+;				[EBP + 16]			= stringLen
+;				[EBP + 12]			= userInputString
+;				[EBP + 8]			= userInputPrompt
 ;
 ; Returns: None	
 ;-----------------------------------------------------------------------------------------------
@@ -152,24 +165,12 @@ introduction ENDP
 readVal PROC
 	PUSH	EBP
 	MOV		EBP, ESP
-	PUSH	EDX
-	PUSH	ECX
-	PUSH	EDI
+	mGetString [EBP + 8], [EBP + 12], [EBP + 16]
 
-	MOV		EDX, [EBP + 8]
-	CALL	writeString
-	MOV		EDX, [EBP + 12]
-	MOV		ECX, MAXSIZE
-	CALL	readString
-	MOV		EDI, [EBP + 16]
-	MOV		[EDI], EAX
-	CALL	CrLF
 
 	; validate the user input and convert
 
-	POP		EDI
-	POP		ECX
-	POP		EDX
+
 	POP		EBP
 	RET		12
 readVal ENDP
@@ -184,9 +185,9 @@ readVal ENDP
 ;
 ; Receives:
 ;				[EBP + 20]			=
-;				[EBP + 16]			= 
-;				[EBP + 12]			= 
-;				[EBP + 8]			= 
+;				[EBP + 16]			= stringLen
+;				[EBP + 12]			= userInputString
+;				[EBP + 8]			= userInputPrompt
 ;
 ; Returns: None	
 ;-----------------------------------------------------------------------------------------------

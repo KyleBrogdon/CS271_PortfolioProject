@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/23/21 09:07:22
+Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/23/21 10:23:25
 <CS271 Project 6: Low level I/O and macros     (Proj6_Brogdo  Page 1 - 1
 
 
@@ -31,10 +31,23 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/23/21 09:07:22
 			      C .LIST
 			      C 
 
-				mGetString MACRO
+				mGetString MACRO prompt, stringStorage, bytesRead
 					; Display a prompt (input parameter, by reference), then get the user’s keyboard input into a memory location (output parameter, by reference). 
 					; You may also need to provide a count (input parameter, by value) for the length of input string you can accommodate and a provide a number 
 					; of bytes read (output parameter, by reference) by the macro.
+
+					PUSHAD
+
+					MOV		EDX, prompt
+					CALL	writeString
+					MOV		EDX, stringStorage
+					MOV		ECX, MAXSIZE
+					CALL	readString
+					MOV		EDI, bytesRead
+					MOV		[EDI], EAX
+					CALL	CrLF
+
+					POPAD
 				ENDM
 
 				mDisplayString MACRO
@@ -181,7 +194,7 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/23/21 09:07:22
  0000002D  68 0000016B R		PUSH	OFFSET userInputPrompt
  00000032  E8 0000006B			CALL	readVal
 
- 00000037  E8 00000092			CALL	writeVal
+ 00000037  E8 0000008E			CALL	writeVal
 
  0000003C  E2 E5			LOOP	_mainLoop
  0000003E  EB 00			JMP		_sayGoodbye
@@ -189,7 +202,7 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/23/21 09:07:22
  00000040			_sayGoodbye:
 					; says farewell to the user
  00000040  68 000001E4 R		PUSH	OFFSET farewell						
- 00000045  E8 00000085			CALL	goodbye								
+ 00000045  E8 00000081			CALL	goodbye								
 
 					Invoke ExitProcess,0	; exit to operating system
  0000004A  6A 00	   *	    push   +000000000h
@@ -261,9 +274,9 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/23/21 09:07:22
 				;
 				; Receives:
 				;				[EBP + 20]			= 
-				;				[EBP + 16]			= 
-				;				[EBP + 12]			= 
-				;				[EBP + 8]			= 
+				;				[EBP + 16]			= stringLen
+				;				[EBP + 12]			= userInputString
+				;				[EBP + 8]			= userInputPrompt
 				;
 				; Returns: None	
 				;-----------------------------------------------------------------------------------------------
@@ -271,27 +284,25 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/23/21 09:07:22
  000000A2			readVal PROC
  000000A2  55				PUSH	EBP
  000000A3  8B EC			MOV		EBP, ESP
- 000000A5  52				PUSH	EDX
- 000000A6  51				PUSH	ECX
- 000000A7  57				PUSH	EDI
+					mGetString [EBP + 8], [EBP + 12], [EBP + 16]
+ 000000A5  60		     1		PUSHAD
+ 000000A6  8B 55 08	     1		MOV		EDX, [EBP + 8]
+ 000000A9  E8 00000000 E     1		CALL	writeString
+ 000000AE  8B 55 0C	     1		MOV		EDX, [EBP + 12]
+ 000000B1  B9 00000065	     1		MOV		ECX, MAXSIZE
+ 000000B6  E8 00000000 E     1		CALL	readString
+ 000000BB  8B 7D 10	     1		MOV		EDI, [EBP + 16]
+ 000000BE  89 07	     1		MOV		[EDI], EAX
+ 000000C0  E8 00000000 E     1		CALL	CrLF
+ 000000C5  61		     1		POPAD
 
- 000000A8  8B 55 08			MOV		EDX, [EBP + 8]
- 000000AB  E8 00000000 E		CALL	writeString
- 000000B0  8B 55 0C			MOV		EDX, [EBP + 12]
- 000000B3  B9 00000065			MOV		ECX, MAXSIZE
- 000000B8  E8 00000000 E		CALL	readString
- 000000BD  8B 7D 10			MOV		EDI, [EBP + 16]
- 000000C0  89 07			MOV		[EDI], EAX
- 000000C2  E8 00000000 E		CALL	CrLF
 
 					; validate the user input and convert
 
- 000000C7  5F				POP		EDI
- 000000C8  59				POP		ECX
- 000000C9  5A				POP		EDX
- 000000CA  5D				POP		EBP
- 000000CB  C2 000C			RET		12
- 000000CE			readVal ENDP
+
+ 000000C6  5D				POP		EBP
+ 000000C7  C2 000C			RET		12
+ 000000CA			readVal ENDP
 
 				;-----------------------------------------------------------------------------------------------
 				; Name: writeVal
@@ -303,17 +314,17 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/23/21 09:07:22
 				;
 				; Receives:
 				;				[EBP + 20]			=
-				;				[EBP + 16]			= 
-				;				[EBP + 12]			= 
-				;				[EBP + 8]			= 
+				;				[EBP + 16]			= stringLen
+				;				[EBP + 12]			= userInputString
+				;				[EBP + 8]			= userInputPrompt
 				;
 				; Returns: None	
 				;-----------------------------------------------------------------------------------------------
 
- 000000CE			writeVal PROC
+ 000000CA			writeVal PROC
 
- 000000CE  C3			RET
- 000000CF			writeVal ENDP
+ 000000CA  C3			RET
+ 000000CB			writeVal ENDP
 
 				;-----------------------------------------------------------------------------------------------
 				; Name: goodbye
@@ -327,23 +338,23 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/23/21 09:07:22
 				;				[EBP + 8]			= goodbye string passed by reference
 				;
 				;-----------------------------------------------------------------------------------------------
- 000000CF			goodbye PROC
- 000000CF  55				PUSH	EBP
- 000000D0  8B EC			MOV		EBP, ESP
+ 000000CB			goodbye PROC
+ 000000CB  55				PUSH	EBP
+ 000000CC  8B EC			MOV		EBP, ESP
 
 					; print goodbye
- 000000D2  E8 00000000 E		CALL	crLF
- 000000D7  52				PUSH	EDX
- 000000D8  8B 55 08			MOV		EDX, [EBP + 8]
- 000000DB  E8 00000000 E		CALL	writeString
+ 000000CE  E8 00000000 E		CALL	crLF
+ 000000D3  52				PUSH	EDX
+ 000000D4  8B 55 08			MOV		EDX, [EBP + 8]
+ 000000D7  E8 00000000 E		CALL	writeString
 					
- 000000E0  5A				POP		EDX
- 000000E1  5D				POP		EBP	
- 000000E2  C2 0004			RET		4
- 000000E5			goodbye ENDP
+ 000000DC  5A				POP		EDX
+ 000000DD  5D				POP		EBP	
+ 000000DE  C2 0004			RET		4
+ 000000E1			goodbye ENDP
 
 				END main
-Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/23/21 09:07:22
+Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/23/21 10:23:25
 <CS271 Project 6: Low level I/O and macros     (Proj6_Brogdo  Symbols 2 - 1
 
 
@@ -446,7 +457,7 @@ Segments and Groups:
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
 _DATA  . . . . . . . . . . . . .	32 Bit	 00000216 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 000000E5 Para	  Public  'CODE'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 000000E1 Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -553,15 +564,15 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-goodbye  . . . . . . . . . . . .	P Near	 000000CF _TEXT	Length= 00000016 Public STDCALL
+goodbye  . . . . . . . . . . . .	P Near	 000000CB _TEXT	Length= 00000016 Public STDCALL
 introduction . . . . . . . . . .	P Near	 00000051 _TEXT	Length= 00000051 Public STDCALL
 main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000051 Public STDCALL
   _mainLoop  . . . . . . . . . .	L Near	 00000023 _TEXT	
   _sayGoodbye  . . . . . . . . .	L Near	 00000040 _TEXT	
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
-readVal  . . . . . . . . . . . .	P Near	 000000A2 _TEXT	Length= 0000002C Public STDCALL
+readVal  . . . . . . . . . . . .	P Near	 000000A2 _TEXT	Length= 00000028 Public STDCALL
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
-writeVal . . . . . . . . . . . .	P Near	 000000CE _TEXT	Length= 00000001 Public STDCALL
+writeVal . . . . . . . . . . . .	P Near	 000000CA _TEXT	Length= 00000001 Public STDCALL
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 
 
