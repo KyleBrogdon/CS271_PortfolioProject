@@ -33,10 +33,10 @@ mDisplayString MACRO
 	; Print the string which is stored in a specified memory location (input parameter, by reference).
 ENDM
 
-NUMINTS = 10								; number of ints we must collect from the user
-MAXSIZE = 101
-32bitUpper = 2147483647						; max value that can be accepted into a signed 32 bit register
-32bitLower = -2147483648					; minimum value that can be accepted into a signed 32 bit register
+NUMINTS = 10										; number of ints we must collect from the user
+MAXSIZE = 11										; max number of characters that can fit in a 32 bit register, including a leading sign
+registerUpperLimit = 2147483647						; max value that can be accepted into a signed 32 bit register
+registerLowerLimit = -2147483648					; minimum value that can be accepted into a signed 32 bit register
 
 .data
 	signedArray		SDWORD		NUMINTS DUP (?)

@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/23/21 10:23:25
+Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/24/21 11:49:37
 <CS271 Project 6: Low level I/O and macros     (Proj6_Brogdo  Page 1 - 1
 
 
@@ -54,8 +54,10 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/23/21 10:23:25
 					; Print the string which is stored in a specified memory location (input parameter, by reference).
 				ENDM
 
- = 0000000A			NUMINTS = 10								; number of ints we must collect from the user
- = 00000065			MAXSIZE = 101
+ = 0000000A			NUMINTS = 10										; number of ints we must collect from the user
+ = 0000000B			MAXSIZE = 11										; max number of characters that can fit in a 32 bit register, including a leading sign
+ = 7FFFFFFF			registerUpperLimit = 2147483647						; max value that can be accepted into a signed 32 bit register
+ =-80000000			registerLowerLimit = -2147483648					; minimum value that can be accepted into a signed 32 bit register
 
  00000000			.data
  00000000  0000000A [			signedArray		SDWORD		NUMINTS DUP (?)
@@ -289,7 +291,7 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/23/21 10:23:25
  000000A6  8B 55 08	     1		MOV		EDX, [EBP + 8]
  000000A9  E8 00000000 E     1		CALL	writeString
  000000AE  8B 55 0C	     1		MOV		EDX, [EBP + 12]
- 000000B1  B9 00000065	     1		MOV		ECX, MAXSIZE
+ 000000B1  B9 0000000B	     1		MOV		ECX, MAXSIZE
  000000B6  E8 00000000 E     1		CALL	readString
  000000BB  8B 7D 10	     1		MOV		EDI, [EBP + 16]
  000000BE  89 07	     1		MOV		[EDI], EAX
@@ -354,7 +356,7 @@ Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/23/21 10:23:25
  000000E1			goodbye ENDP
 
 				END main
-Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/23/21 10:23:25
+Microsoft (R) Macro Assembler Version 14.29.30133.0	    11/24/21 11:49:37
 <CS271 Project 6: Low level I/O and macros     (Proj6_Brogdo  Symbols 2 - 1
 
 
@@ -662,7 +664,7 @@ KEY_EVENT  . . . . . . . . . . .	Number	 00000001h
 KEY_MASKS  . . . . . . . . . . .	Number	 0000001Fh   
 LEFT_ALT_PRESSED . . . . . . . .	Number	 00000002h   
 LEFT_CTRL_PRESSED  . . . . . . .	Number	 00000008h   
-MAXSIZE  . . . . . . . . . . . .	Number	 00000065h   
+MAXSIZE  . . . . . . . . . . . .	Number	 0000000Bh   
 MB_ABORTRETRYIGNORE  . . . . . .	Number	 00000002h   
 MB_APPLMODAL . . . . . . . . . .	Number	 00000000h   
 MB_CANCELTRYCONTINUE . . . . . .	Number	 00000006h   
@@ -813,6 +815,8 @@ programRules1  . . . . . . . . .	Byte	 0000009E _DATA
 programRules2  . . . . . . . . .	Byte	 000000AC _DATA	
 programRules3  . . . . . . . . .	Byte	 000000F5 _DATA	
 red  . . . . . . . . . . . . . .	Number	 00000004h   
+registerLowerLimit . . . . . . .	Number	 -80000000h   
+registerUpperLimit . . . . . . .	Number	 7FFFFFFFh   
 signedArray  . . . . . . . . . .	DWord	 00000000 _DATA	
 stringLen  . . . . . . . . . . .	DWord	 00000212 _DATA	
 userInputPrompt  . . . . . . . .	Byte	 0000016B _DATA	
