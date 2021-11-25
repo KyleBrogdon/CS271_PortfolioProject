@@ -38,8 +38,8 @@ registerUpperLimit = 2147483647						; max value that can be accepted into a sig
 registerLowerLimit = 2147483648						; (negated) minimum value that can be accepted into a signed 32 bit register
 
 .data
-	signedArray			DWORD		NUMINTS DUP (?)
-	userInputString		BYTE		MAXSIZE DUP (?)
+	signedArray			SDWORD		NUMINTS DUP (?)
+	userInputString		SBYTE		MAXSIZE DUP (?)
 	introProgram1		BYTE		"Computer Architecture and Assembly Project 6: Low level input/output procedures and macros", 0
 	introProgram2		BYTE		"Written by: Kyle Brogdon", 13, 10, 0
     programRules1		BYTE		"Please enter ", 0
@@ -50,7 +50,7 @@ registerLowerLimit = 2147483648						; (negated) minimum value that can be accep
 	errorPrompt			BYTE		"ERROR: You did not enter a signed number or the value was too large. Please try again.", 13, 10, 0
 	farewell			BYTE		"Goodbye, and thanks for using this program!", 13, 10, 0
 	stringLen			DWORD		?
-	isNegative			BYTE		0
+	isNegative			DWORD		0
 	integerCount		DWORD		0											; keeps track of number of integers in the signedArray in increments of 4 for DWORD
 
 .code
@@ -163,7 +163,11 @@ introduction ENDP
 ; Postconditions: 
 ;
 ; Receives:
-;				[EBP + 20]			= 
+;				[EBP + 36]			= integerCount
+;				[EBP + 32]			= signedArray
+;				[EBP + 28]			= errorPrompt
+;				[EBP + 24]			= userInputNumeric
+;				[EBP + 20]			= isNegative
 ;				[EBP + 16]			= stringLen
 ;				[EBP + 12]			= userInputString
 ;				[EBP + 8]			= userInputPrompt
@@ -224,34 +228,51 @@ _convertToNumLoop:
 	MOV		ECX, 10
 	MOV		EDX, 0
 	MUL		ECX
+	POP		ECX								; restore loop counter
 	CMP		EDX, 0
 	JNZ		_error							; if not 0, it is too big for 32 bit register
 	SUB		EDI, 48
 	ADD		EAX, EDI
 	JC		_error							; if carry is set, then too large
-	CMP		EAX, registerLowerLimit
-	JA		_error							; can't be a larger number than 2147483648
-	CMP		EAX, registerUpperLimit			; handle edge case where the negative value input is exactly 2147483647
-	JE		_checkNegative
 	MOV		[EBX], EAX
-	POP		ECX
+	CMP		EAX, registerUpperLimit
+	JA		_edgeCase
 	LOOP	_convertToNumLoop
+	JMP		_checkNegative
 
+_edgeCase:
+	; handle case where it is positive and > 2147483647	
+	MOV		ECX, [EBP + 20]
+	MOV		EDX, [ECX]
+	CMP		EDX, 0
+	JE		_error				; if positive and > upperLimit, then error
+	CMP		EAX, registerLowerLimit
+	JLE		_isNegative
+	JMP		_error
+	
 
 _checkNegative:
 	MOV		EAX, [EBP + 20]
 	MOV		EDX, [EAX]
 	CMP		EDX, 1
 	JNE		_addToArray
+
+_isNegative:
 	MOV		EAX, [EBX]
 	NEG		EAX
-	JO		_error
+	CMP		EAX, registerLowerLimit
+	JL		_error
 	MOV		[EBX], EAX
 	JMP		_addToArray
 
 _error:
 	MOV		EDX, [EBP + 28]					; write error message
 	CALL	writeString
+	MOV		EDX, [EBP + 20]
+	MOV		EBX, 0
+	MOV		[EDX], EBX						; reset value of isNegative
+	MOV		EDX, [EBP + 24]
+	MOV		[EDX], EBX						; reset value of userInputNumeric
 	JMP		_getString						; reprompt user
 	
 
@@ -270,6 +291,8 @@ _restoreStack:
 	MOV		EDX, [EBP + 20]
 	MOV		EBX, 0
 	MOV		[EDX], EBX						; reset value of isNegative
+	MOV		EDX, [EBP + 24]
+	MOV		[EDX], EBX						; reset value of userInputNumeric
 	POPAD
 	POP		EBP
 	RET		32
