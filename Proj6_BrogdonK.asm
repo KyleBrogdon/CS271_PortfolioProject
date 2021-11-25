@@ -179,14 +179,14 @@ introduction ENDP
 ; Postconditions: Values of userInputString, stringLen, signedArray, and integerCount are changed.
 ;
 ; Receives:
-;				[EBP + 36]			= integerCount
-;				[EBP + 32]			= signedArray
-;				[EBP + 28]			= errorPrompt
-;				[EBP + 24]			= userInputNumeric
-;				[EBP + 20]			= isNegative
-;				[EBP + 16]			= stringLen
-;				[EBP + 12]			= userInputString
-;				[EBP + 8]			= userInputPrompt
+;				[EBP + 36]			= integerCount passed by reference
+;				[EBP + 32]			= signedArray passed by reference
+;				[EBP + 28]			= errorPrompt passed by reference
+;				[EBP + 24]			= userInputNumeric passed by reference
+;				[EBP + 20]			= isNegative passed by reference
+;				[EBP + 16]			= stringLen passed by reference
+;				[EBP + 12]			= userInputString passed by reference
+;				[EBP + 8]			= userInputPrompt passed by reference
 ;
 ; Returns: None	
 ;-----------------------------------------------------------------------------------------------
@@ -292,15 +292,16 @@ _checkNegative:
 	JNE		_addToArray
 
 _isNegative:
-	; sets 
+	; sets the value to negative before storing the array
 	MOV		EAX, [EBX]
 	NEG		EAX
-	CMP		EAX, registerLowerLimit
+	CMP		EAX, registerLowerLimit			; if less than -2147483648, it does not fit in the register
 	JL		_error
 	MOV		[EBX], EAX
 	JMP		_addToArray
 
 _error:
+	; displays an error when the input is not a 32 bit signed int or is too large/small
 	MOV		EDX, [EBP + 28]					; write error message
 	CALL	writeString
 	MOV		EDX, [EBP + 20]
@@ -308,18 +309,20 @@ _error:
 	MOV		[EDX], EBX						; reset value of isNegative
 	MOV		EDX, [EBP + 24]
 	MOV		[EDX], EBX						; reset value of userInputNumeric
-	JMP		_getString						; reprompt user
+	JMP		_getString						; reprompt user for a valid input
 	
 _addToArray:
-	MOV		EAX, [EBP + 36]
-	MOV		ECX, [EAX]
-	MOV		ESI, [EBP + 32]
-	MOV		EDX, [EBX]
-	MOV		[ESI + ECX], EDX
-	ADD		ECX, 4
-	MOV		[EAX], ECX
+	; adds the value in EBX to the array
+	MOV		EAX, [EBP + 36]					
+	MOV		ECX, [EAX]						; move value in integerCount to ECX
+	MOV		ESI, [EBP + 32]					; move signedArray into ESI
+	MOV		EDX, [EBX]						; numeric value of int into EDX
+	MOV		[ESI + ECX], EDX				; move value into array, use integerCount to track proper index
+	ADD		ECX, 4							; move to next index
+	MOV		[EAX], ECX						; update integerCount
 
-_restoreStack:							
+_restoreStack:
+	; resets isNegative, userInputNumeric, and restores registers/stack						
 	MOV		EDX, [EBP + 20]
 	MOV		EBX, 0
 	MOV		[EDX], EBX						; reset value of isNegative
