@@ -24,7 +24,6 @@ mGetString MACRO prompt, stringStorage, bytesRead
 	CALL	readString
 	MOV		EDI, bytesRead
 	MOV		[EDI], EAX
-	CALL	CrLF
 
 	POPAD
 ENDM
@@ -34,22 +33,25 @@ mDisplayString MACRO
 ENDM
 
 NUMINTS = 10										; number of ints we must collect from the user
-MAXSIZE = 11										; max number of characters that can fit in a 32 bit register, including a leading sign
+MAXSIZE = 100										; max number of characters that can fit in a 32 bit register, including a leading sign
 registerUpperLimit = 2147483647						; max value that can be accepted into a signed 32 bit register
-registerLowerLimit = -2147483648					; minimum value that can be accepted into a signed 32 bit register
+registerLowerLimit = 2147483648						; (negated) minimum value that can be accepted into a signed 32 bit register
 
 .data
-	signedArray		SDWORD		NUMINTS DUP (?)
-	introProgram1	BYTE		"Computer Architecture and Assembly Project 6: Low level input/output procedures and macros", 0
-	introProgram2	BYTE		"Written by: Kyle Brogdon", 13, 10, 0
-    programRules1	BYTE		"Please enter ", 0
-	programRules2	BYTE		" signed decimal integers. Each number must fit inside a 32 bit register.", 0
-	programRules3	BYTE		"After you have finished entering the signed numbers, I will display a list of the integers, their sum, and average.", 13, 10, 0
-	userInputPrompt	BYTE		"Please enter a signed number: ", 0
-	userInputString	BYTE		?
-	errorPrompt		BYTE		"ERROR: You did not enter a signed number or the value was too large. Please try again.", 13, 10, 0
-	farewell		BYTE		"Goodbye, and thanks for using this program!", 13, 10, 0
-	stringLen		DWORD		?
+	signedArray			DWORD		NUMINTS DUP (?)
+	userInputString		BYTE		MAXSIZE DUP (?)
+	introProgram1		BYTE		"Computer Architecture and Assembly Project 6: Low level input/output procedures and macros", 0
+	introProgram2		BYTE		"Written by: Kyle Brogdon", 13, 10, 0
+    programRules1		BYTE		"Please enter ", 0
+	programRules2		BYTE		" signed decimal integers. Each number must fit inside a 32 bit register.", 0
+	programRules3		BYTE		"After you have finished entering the signed numbers, I will display a list of the integers, their sum, and average.", 13, 10, 0
+	userInputPrompt		BYTE		"Please enter a signed number: ", 0
+	userInputNumeric	SDWORD		?
+	errorPrompt			BYTE		"ERROR: You did not enter a signed number or the value was too large. Please try again.", 13, 10, 0
+	farewell			BYTE		"Goodbye, and thanks for using this program!", 13, 10, 0
+	stringLen			DWORD		?
+	isNegative			BYTE		0
+	integerCount		DWORD		0											; keeps track of number of integers in the signedArray in increments of 4 for DWORD
 
 .code
 
@@ -59,7 +61,7 @@ registerLowerLimit = -2147483648					; minimum value that can be accepted into a
 ; does things
 ;
 ; Preconditions: Irvine32 must be included, NUMINTS must be declared, and .data must contain all arrays/strings
-;										used by subprocedures. Array must be type SDWORD.
+;										used by subprocedures. Array must be type BYTE.
 ;
 ;-----------------------------------------------------------------------------------------------
 
@@ -74,6 +76,11 @@ main PROC
 
 	MOV		ECX, NUMINTS
 _mainLoop:
+	PUSH	OFFSET integerCount
+	PUSH	OFFSET signedArray
+	PUSH	OFFSET errorPrompt
+	PUSH	OFFSET userInputNumeric
+	PUSH	OFFSET isNegative
 	PUSH	OFFSET stringLen
 	PUSH	OFFSET userInputString
 	PUSH	OFFSET userInputPrompt
@@ -167,14 +174,105 @@ introduction ENDP
 readVal PROC
 	PUSH	EBP
 	MOV		EBP, ESP
+	PUSHAD
+
+_getString:
 	mGetString [EBP + 8], [EBP + 12], [EBP + 16]
 
+	; check first digit for a sign and set up loop
+	CLD	
+	MOV		ECX, [EBP + 16]
+	MOV		EBX, 0
+	CMP		[ECX], EBX
+	JE		_error							; means the user provided no input
+	MOV		ESI, [EBP + 12]					; move string of digits into ESI
+	LODSB
+	CMP		AL, 43
+	JE		_loopSetup
+	CMP		AL, 45
+	JE		_setNegative
+	MOV		ESI, [EBP + 12]					; reset ESI because there is no sign in front of the string
+	JMP		_loopSetup
+	
 
-	; validate the user input and convert
+_setNegative:
+	; set isNegative flag
+	MOV		EDX, [EBP + 20]
+	MOV		EBX, 1
+	MOV		[EDX], EBX
+	MOV		EDI, [ECX]
+	DEC		EDI
+	MOV		ECX, EDI
+	MOV		EBX, [EBP + 24]
+	JMP		_convertToNumLoop
+
+_loopSetup:
+	MOV		EBX, [EBP + 24]
+	MOV		EDI, [ECX]
+	MOV		ECX, EDI
+
+_convertToNumLoop:
+	PUSH	ECX
+	LODSB									; puts first digit in AL
+	CMP		AL, 48
+	JB		_error
+	CMP		AL, 57
+	JA		_error
+	CLC
+	MOVZX	EDI, AL							; copy value of AL
+	MOV		EAX, [EBX]
+	MOV		ECX, 10
+	MOV		EDX, 0
+	MUL		ECX
+	CMP		EDX, 0
+	JNZ		_error							; if not 0, it is too big for 32 bit register
+	SUB		EDI, 48
+	ADD		EAX, EDI
+	JC		_error							; if carry is set, then too large
+	CMP		EAX, registerLowerLimit
+	JA		_error							; can't be a larger number than 2147483648
+	CMP		EAX, registerUpperLimit			; handle edge case where the negative value input is exactly 2147483647
+	JE		_checkNegative
+	MOV		[EBX], EAX
+	POP		ECX
+	LOOP	_convertToNumLoop
 
 
+_checkNegative:
+	MOV		EAX, [EBP + 20]
+	MOV		EDX, [EAX]
+	CMP		EDX, 1
+	JNE		_addToArray
+	MOV		EAX, [EBX]
+	NEG		EAX
+	JO		_error
+	MOV		[EBX], EAX
+	JMP		_addToArray
+
+_error:
+	MOV		EDX, [EBP + 28]					; write error message
+	CALL	writeString
+	JMP		_getString						; reprompt user
+	
+
+_addToArray:
+	MOV		EAX, [EBP + 36]
+	MOV		ECX, [EAX]
+	MOV		ESI, [EBP + 32]
+	MOV		EDX, [EBX]
+	MOV		[ESI + ECX], EDX
+	ADD		ECX, 4
+	MOV		[EAX], ECX
+
+
+
+_restoreStack:							
+	MOV		EDX, [EBP + 20]
+	MOV		EBX, 0
+	MOV		[EDX], EBX						; reset value of isNegative
+	POPAD
 	POP		EBP
-	RET		12
+	RET		32
 readVal ENDP
 
 ;-----------------------------------------------------------------------------------------------
