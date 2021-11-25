@@ -10,11 +10,23 @@ TITLE CS271 Project 6: Low level I/O and macros     (Proj6_BrogdonK.asm)
 
 INCLUDE Irvine32.inc
 
-mGetString MACRO prompt, stringStorage, bytesRead
-	; Display a prompt (input parameter, by reference), then get the user’s keyboard input into a memory location (output parameter, by reference). 
-	; You may also need to provide a count (input parameter, by value) for the length of input string you can accommodate and a provide a number 
-	; of bytes read (output parameter, by reference) by the macro.
+;-----------------------------------------------------------------------------------------------
+; Name: mGetString
+;
+; Prompts user for a signed 32 bit integer
+;
+; Preconditions: Irvine32 must be included, three macro parameters are required, MAXSIZE must be declared.
+;
+; Postconditions: Values of prompt, stringStorage, bytesRead all changed.
+;
+; Receives:
+;
+;				prompt				= Address of a string to prompt user for input
+;				stringStorage		= Address of a string array to store user input
+;				bytesRead			= Address of a variable to store the number of bytes the user entered
+;-----------------------------------------------------------------------------------------------
 
+mGetString MACRO prompt:REQ, stringStorage:REQ, bytesRead:REQ
 	PUSHAD
 
 	MOV		EDX, prompt
@@ -89,7 +101,6 @@ _mainLoop:
 	CALL	writeVal
 
 	LOOP	_mainLoop
-	JMP		_sayGoodbye
 
 _sayGoodbye:
 	; says farewell to the user
@@ -157,10 +168,15 @@ introduction ENDP
 ;-----------------------------------------------------------------------------------------------
 ; Name: readVal
 ;
+; Calls mGetString macro with three arguments to prompt user and get a signed 32 bit integer. Once 32bit int
+;	is acquired from user, it is saved as a string of numerical digits, converted from ASCII to SDWORD, then
+;	the input is validated as a number (no symbols or letters outside of + or -) that is correctly sized 
+;	for signed 32bit. Once it is validated, it is stored in signedArray.
 ;
-; Preconditions: 
+; Preconditions: Irvine32 must be included, registerUpperLimit and registerLowerLimit must be declared, 8 DWORD length
+;					arguments must be passed via the stack.
 ;
-; Postconditions: 
+; Postconditions: Values of userInputString, stringLen, signedArray, and integerCount are changed.
 ;
 ; Receives:
 ;				[EBP + 36]			= integerCount
@@ -181,83 +197,102 @@ readVal PROC
 	PUSHAD
 
 _getString:
+	; invoke get string and get user input
 	mGetString [EBP + 8], [EBP + 12], [EBP + 16]
 
-	; check first digit for a sign and set up loop
+	; check if user entered anything
 	CLD	
-	MOV		ECX, [EBP + 16]
+	MOV		ECX, [EBP + 16]					; stringLen into ECX
 	MOV		EBX, 0
 	CMP		[ECX], EBX
 	JE		_error							; means the user provided no input
-	MOV		ESI, [EBP + 12]					; move string of digits into ESI
+
+	; check if a sign was entered
+	MOV		ESI, [EBP + 12]					; move string of numerical digits into ESI
 	LODSB
-	CMP		AL, 43
-	JE		_loopSetup
-	CMP		AL, 45
+	CMP		AL, 43							; check for plus sign
+	JE		_leadingPlusSign
+	CMP		AL, 45							; check for minus sign
 	JE		_setNegative
 	MOV		ESI, [EBP + 12]					; reset ESI because there is no sign in front of the string
 	JMP		_loopSetup
 	
 
 _setNegative:
-	; set isNegative flag
+	; sets isNegative flag and sets up loop
 	MOV		EDX, [EBP + 20]
-	MOV		EBX, 1
-	MOV		[EDX], EBX
+	MOV		EBX, 1							
+	MOV		[EDX], EBX						; set isNegative to 1
+	MOV		EDI, [ECX]
+	DEC		EDI								; decrease loop counter so stringLen does not count the sign
+	MOV		ECX, EDI
+	MOV		EBX, [EBP + 24]					; move userInputNumeric to EBX to store value once converted
+	JMP		_convertToNumLoop
+
+_leadingPlusSign:
+	; handles where a + sign was put in front of the input
 	MOV		EDI, [ECX]
 	DEC		EDI
-	MOV		ECX, EDI
-	MOV		EBX, [EBP + 24]
+	MOV		ECX, EDI						; decrease loop counter so stringLen does not count the sign
+	MOV		EBX, [EBP + 24]					; move userInputNumeric to EBX to store value once converted
 	JMP		_convertToNumLoop
 
 _loopSetup:
+	; sets up userInputNumeric and loop counter
 	MOV		EBX, [EBP + 24]
 	MOV		EDI, [ECX]
 	MOV		ECX, EDI
 
 _convertToNumLoop:
-	PUSH	ECX
+	; converts string inputs to numeric
+	PUSH	ECX								; store loop count
 	LODSB									; puts first digit in AL
+
+	; check if input is between 0 and 9
 	CMP		AL, 48
 	JB		_error
 	CMP		AL, 57
 	JA		_error
+
+	; use numInt = 10*numInt + (numChar - 48) to convert ACSII to numbers
 	CLC
-	MOVZX	EDI, AL							; copy value of AL
-	MOV		EAX, [EBX]
+	MOVZX	EDI, AL							; copy value of AL to EDI and zero extend = numChar
+	MOV		EAX, [EBX]						; numInt
 	MOV		ECX, 10
 	MOV		EDX, 0
-	MUL		ECX
+	MUL		ECX								; multiply by 10
 	POP		ECX								; restore loop counter
-	CMP		EDX, 0
-	JNZ		_error							; if not 0, it is too big for 32 bit register
-	SUB		EDI, 48
+	CMP		EDX, 0							
+	JNZ		_error							; check if overflow and bigger than 32 bit signed
+	SUB		EDI, 48							; (numChar-48) 
 	ADD		EAX, EDI
-	JC		_error							; if carry is set, then too large
-	MOV		[EBX], EAX
-	CMP		EAX, registerUpperLimit
-	JA		_edgeCase
+	JC		_error							; if carry is set, then the addition caused it to exceed max value
+	MOV		[EBX], EAX						; set numInt to new value
+	CMP		EAX, registerUpperLimit			; check if larger than > 2147483647	
+	JA		_edgeCase						; check if it's an edge case
 	LOOP	_convertToNumLoop
 	JMP		_checkNegative
 
 _edgeCase:
-	; handle case where it is positive and > 2147483647	
+	; handle edge case where value is 2147483647 or -2147483648	
 	MOV		ECX, [EBP + 20]
 	MOV		EDX, [ECX]
 	CMP		EDX, 0
-	JE		_error				; if positive and > upperLimit, then error
+	JE		_error							; if positive and > upperLimit, then error
 	CMP		EAX, registerLowerLimit
-	JLE		_isNegative
+	JLE		_isNegative						; check for edge case of exactly -2147483648
 	JMP		_error
 	
 
 _checkNegative:
+	; checks if the value needs to be converted back to negative
 	MOV		EAX, [EBP + 20]
 	MOV		EDX, [EAX]
-	CMP		EDX, 1
+	CMP		EDX, 1							; if positive, skip to addToArray
 	JNE		_addToArray
 
 _isNegative:
+	; sets 
 	MOV		EAX, [EBX]
 	NEG		EAX
 	CMP		EAX, registerLowerLimit
@@ -275,7 +310,6 @@ _error:
 	MOV		[EDX], EBX						; reset value of userInputNumeric
 	JMP		_getString						; reprompt user
 	
-
 _addToArray:
 	MOV		EAX, [EBP + 36]
 	MOV		ECX, [EAX]
@@ -284,8 +318,6 @@ _addToArray:
 	MOV		[ESI + ECX], EDX
 	ADD		ECX, 4
 	MOV		[EAX], ECX
-
-
 
 _restoreStack:							
 	MOV		EDX, [EBP + 20]
