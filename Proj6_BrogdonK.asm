@@ -13,14 +13,6 @@ TITLE CS271 Project 6: Low level I/O and macros     (Proj6_BrogdonK.asm)
 ;					**EC 1**: Each line of valid input for the user is numbered, and a running total is displayed using
 ;						writeVAL
 ;             
-;
-;
-;
-;
-;
-;
-;
-;
 
 INCLUDE Irvine32.inc
 
