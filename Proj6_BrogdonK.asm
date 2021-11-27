@@ -1,7 +1,7 @@
 TITLE CS271 Project 6: Low level I/O and macros     (Proj6_BrogdonK.asm)
 
 ; Author: Kyle Brogdon
-; Last Modified: 21NOV2021
+; Last Modified: 26NOV2021
 ; OSU email address: ONID_ID@oregonstate.edu
 ; Course number/section:   CS271 Section 400
 ; Project Number: 6                Due Date: 06DEC2021
@@ -26,9 +26,8 @@ INCLUDE Irvine32.inc
 ;				bytesRead			= Address of a variable to store the number of bytes the user entered
 ;-----------------------------------------------------------------------------------------------
 
-mGetString MACRO prompt:REQ, stringStorage:REQ, bytesRead:REQ
+mGetString MACRO prompt:REQ, stringStorage:REQ, bytesRead:REQ, numberValidLines
 	PUSHAD
-
 	MOV		EDX, prompt
 	CALL	writeString
 	MOV		EDX, stringStorage
@@ -55,26 +54,33 @@ registerLowerLimit = 2147483648						; (negated) minimum value that can be accep
 .data
 	signedArray			SDWORD		NUMINTS DUP (?)
 	userInputString		SBYTE		MAXSIZE DUP (?)
-	userOutputString	BYTE		MAXSIZE DUP (?)
+	userOutputString	SBYTE		MAXSIZE DUP (?)
+	arraySumConverted	SBYTE		MAXSIZE DUP (?)
+	averageConverted	SBYTE		MAXSIZE DUP (?)
+	numLinesArray		SBYTE		MAXSIZE DUP (?)
+	runningConverted	SBYTE		MAXSIZE DUP (?)
 	introProgram1		BYTE		"Computer Architecture and Assembly Project 6: Low level input/output procedures and macros", 0
 	introProgram2		BYTE		"Written by: Kyle Brogdon", 13, 10, 0
     programRules1		BYTE		"Please enter ", 0
 	programRules2		BYTE		" signed decimal integers. Each number must fit inside a 32 bit register.", 0
-	programRules3		BYTE		"After you have finished entering the signed numbers, I will display a list of the integers, their sum, and average.", 13, 10, 0
-	userInputPrompt		BYTE		"Please enter a signed number: ", 0
+	programRules3		BYTE		"After you have finished entering the signed numbers, I will display a list of the integers, their sum, and average.", 0
+	extraCredit1		BYTE		"**EC 2**: Numbers each line of user input and displays running subtotal of the user's valid numbers using writeVal", 13, 10, 0
+	userInputPrompt		BYTE		". Please enter a signed number: ", 0
 	userInputNumeric	SDWORD		?
 	errorPrompt			BYTE		"ERROR: You did not enter a signed number or the value was too large. Please try again.", 13, 10, 0
 	numbersInputString	BYTE		"You entered the following numbers: ", 13, 10, 0
-	sumString			BYTE		"The sum offset these numbers is: " , 0
+	sumString			BYTE		"The sum of these numbers is: " , 0
 	roundedString		BYTE		"The rounded average is: ", 0
-	runningTotalString	BYTE		"The running total offset your signed ints is: ", 0
+	runningTotalString	BYTE		"The running total of your signed ints is: ", 0
 	farewell			BYTE		"Goodbye, and thanks for using this program!", 13, 10, 0
+	commaSpace			BYTE		", ", 0
+	nullTerm			BYTE		" ",13,10,0
 	stringLen			DWORD		?
 	isNegative			DWORD		0
 	integerCount		DWORD		0											; keeps track of number of integers in the signedArray in increments of 4 for DWORD
 	arraySum			SDWORD		0
-	arraySumConverted	BYTE		MAXSIZE DUP (?)
 	runningTotal		SDWORD		0
+	userLines			DWORD		1
 
 .code
 
@@ -89,7 +95,9 @@ registerLowerLimit = 2147483648						; (negated) minimum value that can be accep
 ;-----------------------------------------------------------------------------------------------
 
 main PROC
+	PUSHAD
 	; introduces the user to the program, the programmer, and the rules
+	PUSH	OFFSET extraCredit1
 	PUSH	OFFSET programRules3
 	PUSH	OFFSET programRules2
 	PUSH	OFFSET programRules1
@@ -99,7 +107,8 @@ main PROC
 
 	MOV		ECX, NUMINTS
 _getIntsLoop:
-	PUSH	OFFSET integerCount
+	PUSH	OFFSET numLinesArray
+	PUSH	OFFSET userLines
 	PUSH	OFFSET signedArray
 	PUSH	OFFSET errorPrompt
 	PUSH	OFFSET userInputNumeric
@@ -109,27 +118,93 @@ _getIntsLoop:
 	PUSH	OFFSET userInputPrompt
 	CALL	readVal
 
-	PUSH	integerCount
-	PUSH	OFFSET runningTotal
-	PUSH	OFFSET runningTotalString
-	PUSH	OFFSET signedArray
-	CALL	runningTotal
-	LOOP	_getIntsLoop
-	
-	PUSH	OFFSET arraySumConverted
-	PUSH	OFFSET roundedString
-	PUSH	OFFSET sumString
-	PUSH	OFFSET numbersInputString
-	PUSH	OFFSET arraySum
-	PUSH	OFFSET userOuputString
-	PUSH	OFFSET signedArray
-	CALL	writeVal
+	; add value from readVal to array
+	MOV		EAX, userInputNumeric					
+	MOV		ESI, OFFSET signedArray				; move value in integerCount to ECX
+	MOV		EBX, integerCount
+	MOV		[ESI + EBX], EAX					; move value into array, use integerCount to track proper index
+	ADD		integerCount, 4						; move to next index
+	INC		userLines
 
+	mDisplayString OFFSET runningTotalString	; print runningTotal title
+	MOV		EAX, userInputNumeric
+
+	_continueRunning:
+	ADD		runningTotal, EAX
+	PUSH	OFFSET runningConverted
+	PUSH	runningTotal
+	CALL	writeVal							; print the convertedRunningTotal
+	MOV		userInputNumeric, 0					; reset value of userInputNumeric
+	DEC		ECX
+	CALL	CrLF
+
+	; clear runningConverted array
+	PUSH	ECX
+	CLD
+	MOV		EAX, 0
+	MOV		ECX, SIZEOF runningConverted
+	MOV		EDI, OFFSET runningConverted
+	REP		STOSB
+	POP		ECX
+	
+	CMP		ECX, 0
+	JNZ		_getIntsLoop
+	mDisplayString OFFSET nullTerm
+	
+	; converts numbers input to an ASCII string and displays them
+	MOV		ECX, NUMINTS
+	MOV		EBX, 0								; used to track correct index
+	mDisplayString OFFSET numbersInputString
+_displayNumbersInputed:
+	; displays each number the user input as a string separated by commas
+	MOV		ESI, OFFSET signedArray
+	MOV		EDX, [ESI + EBX]
+	PUSH	OFFSET userOutputString
+	PUSH	EDX
+	CALL	writeVal
+	CMP		ECX, 1
+	JE		_lastVal
+	mDisplayString OFFSET commaSpace
+	ADD		EBX, 4
+
+	; clear userOutputString array
+	PUSH	ECX
+	CLD
+	MOV		EAX, 0
+	MOV		ECX, SIZEOF userOutputString
+	MOV		EDI, OFFSET userOutputString
+	REP		STOSB
+	POP		ECX
+
+	LOOP	_displayNumbersInputed
+_lastVal:
+	mDisplayString OFFSET nullTerm
+
+	; converts the sum of all signed ints input, then display it
+	CALL	Crlf
+	mDisplayString OFFSET sumString
+	PUSH	OFFSET arraySumConverted
+	PUSH	runningTotal
+	CALL	writeVal
+	CALL	Crlf
+	mDisplayString OFFSET nullTerm
+
+	mDisplayString OFFSET roundedString
+	; Calculates the average of the input ints
+	MOV		EAX, runningTotal
+	MOV		EBX, NUMINTS
+	MOV		EDX, 0
+	DIV		EBX
+	PUSH	OFFSET averageConverted
+	PUSH	EAX					; push floor average to writeVal
+	CALL	writeVal
+	CALL	crlf
 
 _sayGoodbye:
 	; says farewell to the user
 	PUSH	OFFSET farewell						
-	CALL	goodbye								
+	CALL	goodbye
+	POPAD								
 
 	Invoke ExitProcess,0	; exit to operating system
 main ENDP
@@ -143,7 +218,7 @@ main ENDP
 ; Preconditions: NUMINTS must be declared. Irvine32 lib must be included.
 ;
 ; Receives:
-;				
+;				[EBP + 28]			= extraCredit1 passed by reference
 ;				[EBP + 24]			= programRules3 passed by reference
 ;				[EBP + 20]			= programRules2 passed by reference
 ;				[EBP + 16]			= programRules1 passed by reference
@@ -182,11 +257,15 @@ introduction PROC
 	CALL	writeString
 	CALL	CrLF
 
+	MOV		EDX, [EBP + 28]
+	CALL	writeString
+	CALL	CrLF
+
 	; restore stack
 	POP		EDX
 	POP		EAX
 	POP		EBP
-	RET		20
+	RET		24
 introduction ENDP
 
 ;-----------------------------------------------------------------------------------------------
@@ -203,7 +282,8 @@ introduction ENDP
 ; Postconditions: Values of userInputString, stringLen, signedArray, and integerCount are changed.
 ;
 ; Receives:
-;				[EBP + 36]			= integerCount passed by reference
+;				[EBP + 40]			= numLinesArray by reference
+;				[EBP + 36]			= userLines by value
 ;				[EBP + 32]			= signedArray passed by reference
 ;				[EBP + 28]			= errorPrompt passed by reference
 ;				[EBP + 24]			= userInputNumeric passed by reference
@@ -221,6 +301,14 @@ readVal PROC
 	PUSHAD
 
 _getString:
+
+	MOV		ESI, [EBP + 36]
+	MOV		EAX, [ESI]
+	MOV		EDX, [EBP + 40]
+	PUSH	EDX	
+	PUSH	EAX
+	CALL	writeVal
+
 	; invoke get string and get user input
 	mGetString [EBP + 8], [EBP + 12], [EBP + 16]
 
@@ -313,7 +401,7 @@ _checkNegative:
 	MOV		EAX, [EBP + 20]
 	MOV		EDX, [EAX]
 	CMP		EDX, 1							; if positive, skip to addToArray
-	JNE		_addToArray
+	JNE		_restoreStack
 
 _isNegative:
 	; sets the value to negative before storing the array
@@ -322,7 +410,7 @@ _isNegative:
 	CMP		EAX, registerLowerLimit			; if less than -2147483648, it does not fit in the register
 	JL		_error
 	MOV		[EBX], EAX
-	JMP		_addToArray
+	JMP		_restoreStack
 
 _error:
 	; displays an error when the input is not a 32 bit signed int or is too large/small
@@ -335,74 +423,17 @@ _error:
 	MOV		[EDX], EBX						; reset value of userInputNumeric
 	JMP		_getString						; reprompt user for a valid input
 	
-_addToArray:
-	; adds the value in EBX to the array
-	MOV		EAX, [EBP + 36]					
-	MOV		ECX, [EAX]						; move value in integerCount to ECX
-	MOV		ESI, [EBP + 32]					; move signedArray into ESI
-	MOV		EDX, [EBX]						; numeric value of int into EDX
-	MOV		[ESI + ECX], EDX				; move value into array, use integerCount to track proper index
-	ADD		ECX, 4							; move to next index
-	MOV		[EAX], ECX						; update integerCount
 
 _restoreStack:
-	; resets isNegative, userInputNumeric, and restores registers/stack						
+	; resets isNegative and restores registers/stack						
 	MOV		EDX, [EBP + 20]
 	MOV		EBX, 0
 	MOV		[EDX], EBX						; reset value of isNegative
-	MOV		EDX, [EBP + 24]
-	MOV		[EDX], EBX						; reset value of userInputNumeric
 	POPAD
 	POP		EBP
-	RET		32
+	RET		36
 
 readVal ENDP
-
-
-;-----------------------------------------------------------------------------------------------
-; Name: runningTotal
-;
-;
-; Preconditions: 
-;
-; Postconditions: 
-;
-; Receives:
-;				[EBP + 20]			= integerCount by value
-;				[EBP + 16]			= runningTotal by reference
-;				[EBP + 12]			= runningTotalString by reference
-;				[EBP + 8]			= signedArray by reference
-;
-; Returns: None	
-;-----------------------------------------------------------------------------------------------
-
-runningTotal PROC
-	PUSH	EBP
-	MOV		EBP, ESP
-	PUSHAD
-
-	mDisplayString [EBP + 12]
-
-	MOV		ESI, [EBP + 8]
-	MOV		EAX, [EBP + 20]
-	MOV		EBX, 4						; length of dword
-	MUL		EBX							; find register indirect address offset			
-
-	ADD		ESI, EAX					; register indirect to current array value
-	MOV		EBX, [EBP + 16]	
-	MOV		EDX, [EBX]					; runningTotal value into EDX
-	ADD		EDX, [ESI]
-	MOV		[ESI], EDX					; update runningTotal
-
-
-	; convert running total to string
-
-	mDisplayString [EBP + 16]
-
-	POPAD
-	POP		EBP
-	RET		16
-runningTotal ENDP
 
 ;-----------------------------------------------------------------------------------------------
 ; Name: writeVal
@@ -413,13 +444,8 @@ runningTotal ENDP
 ; Postconditions: 
 ;
 ; Receives:
-;				[EBP + 32]			= arraySumConverted by reference
-;				[EBP + 28]			= roundedString by reference
-;				[EBP + 24]			= sumString by reference
-;				[EBP + 20]			= numbersInputString by reference
-;				[EBP + 16]			= arraySum by reference
-;				[EBP + 12]			= userOutputString by reference
-;				[EBP + 8]			= signedArray by reference
+;				[EBP + 12]			= an array to store the output string by reference
+;				[EBP + 8]			= a signed integer passed by value
 ;
 ; Returns: None	
 ;-----------------------------------------------------------------------------------------------
@@ -429,104 +455,44 @@ writeVal PROC
 	MOV		EBP, ESP
 	PUSHAD
 
-	mDisplayString [EBP + 20]  			; print numbersInputString
-
-	MOV		ECX, NUMINTS
-	MOV		ESI, [EBP + 8]				; signedArray to ESI
-	MOV		EDI, [EBP + 12]				; userOutputString to EDI
+	MOV		EDI, [EBP + 12]				; outputString to EDI
 	CLD
-	MOV		EBX, 0						; number of digits counter
+	MOV		ECX, 0						; number of digits counter
+	MOV		EAX, [EBP + 8]				;
+	CMP		EAX, 0
+	JGE		_convertToDigits
 
-_nextInt:
-	LODSD								; load next sdword
-_printArrayLoop:
+_setNegative:	
+	NEG		EAX
+	PUSH	EAX
+	MOV		AL, 45						; add negative sign
+	STOSB
+	POP		EAX
+
+_convertToDigits:
 	; Converts SDWORD values to single digits for conversion to ASCII
-	PUSH	ECX
-	MOV		EAX, [ESI]
-	MOV		ECX, 10
+	MOV		EBX, 10
 	MOV		EDX, 0
-	DIV		ECX
-	PUSH	DL							; push this digit of the int to the stack (from right side to left)
-	INC		EBX							; increment number of digits
+	DIV		EBX
+	PUSH	DX							; push this digit of the int to the stack (from right side to left)
+	INC		ECX							; increment number of digits
 	CMP		EAX, 0
-	JNZ		_printArrayLoop				; continue until EAX is 0
-	
-	MOV		ECX, EBX					; loop over proper number of digits
-_convertDigits:
+	JNZ		_convertToDigits			; continue until EAX is 0
+
+
+_convertToASCII:
 	; converts each single digit to ASCII, and stores as a string separated by commas
-	POP		AL
+	POP		AX
 	ADD		AL, 48						; converts to ASCII
 	STOSB
-	LOOP	_convertDigits
-
-	; separate with comma and space
-	MOV		AL, 44						; inserts a comma
-	STOSB
-	MOV		AL, 32						; inserts a space
-	STOSB
-	POP		ECX							; restores NUMINTS loop counter, then loops
-	LOOP	_nextInt
-
-	mDisplayString [EBP + 12]			; prints the converted string of input numbers
-
-	mDisplayString [EBP + 24]			; prints sumString title
-
-	; calculates the sum of the signedArray
-	MOV		ESI, [EBP + 8]				; signed array into ESI
-	MOV		ECX, NUMINTS					
-
-_calculateSum:
-	MOV		EAX, [EBP + 16]
-	MOV		EBX, [EAX]
-	ADD		EBX, [ESI]
-	MOV		[EAX], EBX
-	ADD		ESI, 4						; size of DWORD
-	LOOP	calculateSum
-
-	CLD
-	MOV		ESI, [EBP + 16]				; array sum into ESI
-	MOV		EDI, [EBP + 32]				; arraySumConverted into EDI
-	LODSD								; load arraySum
-
-_convertSumLoop:
-	; Converts arraySum single digits for conversion to ASCII
-	MOV		EAX, [ESI]
-	MOV		ECX, 10
-	MOV		EDX, 0
-	DIV		ECX
-	PUSH	DL							; push this digit of the int to the stack (from right side to left)
-	INC		EBX							; increment number of digits
-	CMP		EAX, 0
-	JNZ		_convertSumLoop				; continue until EAX is 0
-		
-	MOV		ECX, EBX					; loop over proper number of digits
-_convertSumDigits:
-	; converts each single digit to ASCII, and stores as a string separated by commas
-	POP		AL
-	ADD		AL, 48						; converts to ASCII
-	STOSB
-	LOOP	_convertSumDigits
-
-	mDisplayString [EBP + 32]			; print converted arraySum
-
-	mDisplayString
+	LOOP	_convertToASCII
 
 
-
-
-
-	; print sum numbers string
-	; loop through signedArray, adding all values together
-	; store value in arraySum
-	; convert arraySum to string
-	; call mDisplayString
-
-	; divide arraySum by NUMINTS, result = EAX
-	
+	mDisplayString [EBP + 12]
 
 	POPAD
 	POP		EBP
-	RET
+	RET		8
 	writeVal ENDP
 
 ;-----------------------------------------------------------------------------------------------
@@ -537,7 +503,6 @@ _convertSumDigits:
 ; Preconditions: Irvine32 must be included.
 ;
 ; Receives:
-;
 ;				[EBP + 8]			= goodbye string passed by reference
 ;
 ;-----------------------------------------------------------------------------------------------
