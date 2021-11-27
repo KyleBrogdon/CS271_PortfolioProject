@@ -40,8 +40,11 @@ mGetString MACRO prompt:REQ, stringStorage:REQ, bytesRead:REQ
 	POPAD
 ENDM
 
-mDisplayString MACRO
-	; Print the string which is stored in a specified memory location (input parameter, by reference).
+mDisplayString MACRO string: REQ
+	PUSH	EDX
+	MOV		EDX, string
+	CALL	writeString
+	POP		EDX
 ENDM
 
 NUMINTS = 10										; number of ints we must collect from the user
@@ -60,10 +63,16 @@ registerLowerLimit = 2147483648						; (negated) minimum value that can be accep
 	userInputPrompt		BYTE		"Please enter a signed number: ", 0
 	userInputNumeric	SDWORD		?
 	errorPrompt			BYTE		"ERROR: You did not enter a signed number or the value was too large. Please try again.", 13, 10, 0
+	numbersInputString	BYTE		"You entered the following numbers: ", 13, 10, 0
+	sumString			BYTE		"The sum offset these numbers is: " , 0
+	roundedString		BYTE		"The rounded average is: ", 0
+	runningTotalString	BYTE		"The running total offset your signed ints is: ", 0
 	farewell			BYTE		"Goodbye, and thanks for using this program!", 13, 10, 0
 	stringLen			DWORD		?
 	isNegative			DWORD		0
 	integerCount		DWORD		0											; keeps track of number of integers in the signedArray in increments of 4 for DWORD
+	arraySum			SDWORD		?
+	runningTotal		SDWORD		0
 
 .code
 
@@ -87,7 +96,7 @@ main PROC
 	CALL	introduction
 
 	MOV		ECX, NUMINTS
-_mainLoop:
+_getIntsLoop:
 	PUSH	OFFSET integerCount
 	PUSH	OFFSET signedArray
 	PUSH	OFFSET errorPrompt
@@ -98,9 +107,18 @@ _mainLoop:
 	PUSH	OFFSET userInputPrompt
 	CALL	readVal
 
+	PUSH	integerCount
+	PUSH	OFFSET runningTotal
+	PUSH	OFFSET runningTotalString
+	PUSH	OFFSET signedArray
+	CALL	runningTotal
+	LOOP	_getIntsLoop
+	
+	PUSH	OFFSET arraySum
+	PUSH	OFFSET userInputString
+	PUSH	OFFSET signedArray
 	CALL	writeVal
 
-	LOOP	_mainLoop
 
 _sayGoodbye:
 	; says farewell to the user
@@ -331,7 +349,54 @@ _restoreStack:
 	POPAD
 	POP		EBP
 	RET		32
+
 readVal ENDP
+
+
+;-----------------------------------------------------------------------------------------------
+; Name: runningTotal
+;
+;
+; Preconditions: 
+;
+; Postconditions: 
+;
+; Receives:
+;				[EBP + 20]			= integerCount by value
+;				[EBP + 16]			= runningTotal by reference
+;				[EBP + 12]			= runningTotalString by reference
+;				[EBP + 8]			= signedArray by reference
+;
+; Returns: None	
+;-----------------------------------------------------------------------------------------------
+
+runningTotal PROC
+	PUSH	EBP
+	MOV		EBP, ESP
+	PUSHAD
+
+	mDisplayString [EBP + 12]
+
+	MOV		ESI, [EBP + 8]
+	MOV		EAX, [EBP + 20]
+	MOV		EBX, 4						; length of dword
+	MUL		EBX							; find register indirect address offset			
+
+	ADD		ESI, EAX					; register indirect to current array value
+	MOV		EBX, [EBP + 16]	
+	MOV		EDX, [EBX]					; runningTotal value into EDX
+	ADD		EDX, [ESI]
+	MOV		[ESI], EDX					; update runningTotal
+
+
+	; convert running total to string
+
+	mDisplayString [EBP + 16]
+
+	POPAD
+	POP		EBP
+	RET		16
+runningTotal ENDP
 
 ;-----------------------------------------------------------------------------------------------
 ; Name: writeVal
@@ -351,9 +416,26 @@ readVal ENDP
 ;-----------------------------------------------------------------------------------------------
 
 writeVal PROC
+	PUSH	EBP
+	MOV		EBP, ESP
+	PUSHAD
 
-RET
-writeVal ENDP
+	; print entered following numbers string
+	; loop array, converting SDWORD to string, printing via mDisplayString
+
+	; print sum numbers string
+	; loop through signedArray, adding all values together
+	; store value in arraySum
+	; convert arraySum to string
+	; call mDisplayString
+
+	; divide arraySum by NUMINTS, result = EAX
+	
+
+	POPAD
+	POP		EBP
+	RET
+	writeVal ENDP
 
 ;-----------------------------------------------------------------------------------------------
 ; Name: goodbye
