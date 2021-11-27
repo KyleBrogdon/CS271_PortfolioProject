@@ -55,6 +55,7 @@ registerLowerLimit = 2147483648						; (negated) minimum value that can be accep
 .data
 	signedArray			SDWORD		NUMINTS DUP (?)
 	userInputString		SBYTE		MAXSIZE DUP (?)
+	userOutputString	BYTE		MAXSIZE DUP (?)
 	introProgram1		BYTE		"Computer Architecture and Assembly Project 6: Low level input/output procedures and macros", 0
 	introProgram2		BYTE		"Written by: Kyle Brogdon", 13, 10, 0
     programRules1		BYTE		"Please enter ", 0
@@ -71,7 +72,8 @@ registerLowerLimit = 2147483648						; (negated) minimum value that can be accep
 	stringLen			DWORD		?
 	isNegative			DWORD		0
 	integerCount		DWORD		0											; keeps track of number of integers in the signedArray in increments of 4 for DWORD
-	arraySum			SDWORD		?
+	arraySum			SDWORD		0
+	arraySumConverted	BYTE		MAXSIZE DUP (?)
 	runningTotal		SDWORD		0
 
 .code
@@ -114,8 +116,12 @@ _getIntsLoop:
 	CALL	runningTotal
 	LOOP	_getIntsLoop
 	
+	PUSH	OFFSET arraySumConverted
+	PUSH	OFFSET roundedString
+	PUSH	OFFSET sumString
+	PUSH	OFFSET numbersInputString
 	PUSH	OFFSET arraySum
-	PUSH	OFFSET userInputString
+	PUSH	OFFSET userOuputString
 	PUSH	OFFSET signedArray
 	CALL	writeVal
 
@@ -407,10 +413,13 @@ runningTotal ENDP
 ; Postconditions: 
 ;
 ; Receives:
-;				[EBP + 20]			=
-;				[EBP + 16]			= stringLen
-;				[EBP + 12]			= userInputString
-;				[EBP + 8]			= userInputPrompt
+;				[EBP + 32]			= arraySumConverted by reference
+;				[EBP + 28]			= roundedString by reference
+;				[EBP + 24]			= sumString by reference
+;				[EBP + 20]			= numbersInputString by reference
+;				[EBP + 16]			= arraySum by reference
+;				[EBP + 12]			= userOutputString by reference
+;				[EBP + 8]			= signedArray by reference
 ;
 ; Returns: None	
 ;-----------------------------------------------------------------------------------------------
@@ -420,8 +429,91 @@ writeVal PROC
 	MOV		EBP, ESP
 	PUSHAD
 
-	; print entered following numbers string
-	; loop array, converting SDWORD to string, printing via mDisplayString
+	mDisplayString [EBP + 20]  			; print numbersInputString
+
+	MOV		ECX, NUMINTS
+	MOV		ESI, [EBP + 8]				; signedArray to ESI
+	MOV		EDI, [EBP + 12]				; userOutputString to EDI
+	CLD
+	MOV		EBX, 0						; number of digits counter
+
+_nextInt:
+	LODSD								; load next sdword
+_printArrayLoop:
+	; Converts SDWORD values to single digits for conversion to ASCII
+	PUSH	ECX
+	MOV		EAX, [ESI]
+	MOV		ECX, 10
+	MOV		EDX, 0
+	DIV		ECX
+	PUSH	DL							; push this digit of the int to the stack (from right side to left)
+	INC		EBX							; increment number of digits
+	CMP		EAX, 0
+	JNZ		_printArrayLoop				; continue until EAX is 0
+	
+	MOV		ECX, EBX					; loop over proper number of digits
+_convertDigits:
+	; converts each single digit to ASCII, and stores as a string separated by commas
+	POP		AL
+	ADD		AL, 48						; converts to ASCII
+	STOSB
+	LOOP	_convertDigits
+
+	; separate with comma and space
+	MOV		AL, 44						; inserts a comma
+	STOSB
+	MOV		AL, 32						; inserts a space
+	STOSB
+	POP		ECX							; restores NUMINTS loop counter, then loops
+	LOOP	_nextInt
+
+	mDisplayString [EBP + 12]			; prints the converted string of input numbers
+
+	mDisplayString [EBP + 24]			; prints sumString title
+
+	; calculates the sum of the signedArray
+	MOV		ESI, [EBP + 8]				; signed array into ESI
+	MOV		ECX, NUMINTS					
+
+_calculateSum:
+	MOV		EAX, [EBP + 16]
+	MOV		EBX, [EAX]
+	ADD		EBX, [ESI]
+	MOV		[EAX], EBX
+	ADD		ESI, 4						; size of DWORD
+	LOOP	calculateSum
+
+	CLD
+	MOV		ESI, [EBP + 16]				; array sum into ESI
+	MOV		EDI, [EBP + 32]				; arraySumConverted into EDI
+	LODSD								; load arraySum
+
+_convertSumLoop:
+	; Converts arraySum single digits for conversion to ASCII
+	MOV		EAX, [ESI]
+	MOV		ECX, 10
+	MOV		EDX, 0
+	DIV		ECX
+	PUSH	DL							; push this digit of the int to the stack (from right side to left)
+	INC		EBX							; increment number of digits
+	CMP		EAX, 0
+	JNZ		_convertSumLoop				; continue until EAX is 0
+		
+	MOV		ECX, EBX					; loop over proper number of digits
+_convertSumDigits:
+	; converts each single digit to ASCII, and stores as a string separated by commas
+	POP		AL
+	ADD		AL, 48						; converts to ASCII
+	STOSB
+	LOOP	_convertSumDigits
+
+	mDisplayString [EBP + 32]			; print converted arraySum
+
+	mDisplayString
+
+
+
+
 
 	; print sum numbers string
 	; loop through signedArray, adding all values together
