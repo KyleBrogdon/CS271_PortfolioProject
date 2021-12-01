@@ -82,7 +82,7 @@ registerLowerLimit = 2147483648							; (negated) minimum value that can be acce
     programRules1		BYTE		"Please enter ", 0
 	programRules2		BYTE		" signed decimal integers. Each number must fit inside a 32 bit register.", 0
 	programRules3		BYTE		"After you have finished entering the signed numbers, I will display a list of the integers, their sum, and average.", 0
-	extraCredit1		BYTE		"**EC 1**: Numbers each line of user input and displays running subtotal of the user's valid numbers using writeVal", 13, 10, 0
+	extraCredit1		BYTE		"**EC 1: Numbers each line of user input and displays running subtotal of the user's valid numbers using writeVal**", 13, 10, 0
 	userInputPrompt		BYTE		". Please enter a signed number: ", 0
 	errorPrompt			BYTE		"ERROR: You did not enter a signed number or the value was too large. Please try again.", 13, 10, 0
 	numbersInputString	BYTE		"You entered the following numbers: ", 13, 10, 0
@@ -228,9 +228,9 @@ _lastVal:
 
 	; Calculates the average of the input ints
 	MOV		EAX, runningTotal
+	CDQ
 	MOV		EBX, NUMINTS
-	MOV		EDX, 0
-	DIV		EBX
+	IDIV	EBX
 	PUSH	OFFSET averageConverted						; storage string for the converted average
 	PUSH	EAX											; push floor average to writeVal for conversion and display
 	CALL	writeVal
@@ -354,7 +354,7 @@ _getString:
 	MOV		ECX, [EBP + 16]								; stringLen into ECX
 	MOV		EBX, 0
 	CMP		[ECX], EBX
-	JE		_error										; means the user provided no input
+	JE		_noEntry										; means the user provided no input
 
 	; check if a sign was entered
 	MOV		ESI, [EBP + 12]								; move string of numerical digits into ESI
@@ -480,6 +480,12 @@ _restoreStack:
 	POPAD
 	POP		EBP
 	RET		36
+
+_noEntry:
+	;no valid entry from user
+	MOV		EDX, [EBP + 28]								; write error message
+	CALL	writeString
+	JMP		_getString
 
 readVal ENDP
 
